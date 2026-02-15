@@ -1,0 +1,14 @@
+{
+  "name": "twitch-clawcraft",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Twitch tool execution service for ClawCraft runtimes",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
