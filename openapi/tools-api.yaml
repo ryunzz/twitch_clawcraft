@@ -1,13 +1,15 @@
 openapi: 3.0.3
 info:
   title: twitch-clawcraft Tool API
-  version: 0.1.0
+  version: 0.2.0
 servers:
   - url: http://localhost:3040
 paths:
   /tools/execute:
     post:
       summary: Execute a Twitch tool action for a bot
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -16,7 +18,7 @@ paths:
               $ref: '#/components/schemas/ToolExecuteRequest'
       responses:
         '200':
-          description: Synchronous action completed or accepted
+          description: Synchronous action completed
           content:
             application/json:
               schema:
@@ -33,9 +35,13 @@ paths:
           description: Unauthorized
         '429':
           description: Action rate limit exceeded
+        '500':
+          description: Tool execution failed
   /tools/jobs/{id}:
     get:
       summary: Retrieve async job status
+      security:
+        - BearerAuth: []
       parameters:
         - in: path
           required: true
@@ -50,9 +56,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ToolJobResponse'
+        '401':
+          description: Unauthorized
         '404':
           description: Job not found
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Use TOOL_SERVICE_TOKEN as bearer token.
   schemas:
     ToolExecuteRequest:
       type: object
@@ -65,6 +79,8 @@ components:
           type: string
         agent_id:
           type: string
+          minLength: 2
+          maxLength: 120
         action:
           type: string
           enum:
@@ -75,12 +91,124 @@ components:
             - twitch.post_chat_message
             - twitch.create_clip
         args:
-          type: object
-          additionalProperties: false
+          oneOf:
+            - $ref: '#/components/schemas/StartStreamArgs'
+            - $ref: '#/components/schemas/StopStreamArgs'
+            - $ref: '#/components/schemas/SetTitleArgs'
+            - $ref: '#/components/schemas/SetGameArgs'
+            - $ref: '#/components/schemas/PostChatArgs'
+            - $ref: '#/components/schemas/CreateClipArgs'
         mission_id:
           type: string
         correlation_id:
           type: string
+    StartStreamArgs:
+      type: object
+      additionalProperties: false
+      required:
+        - channel
+      properties:
+        channel:
+          type: string
+          minLength: 2
+          maxLength: 64
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        game:
+          type: string
+          minLength: 1
+          maxLength: 120
+        game_id:
+          type: string
+          minLength: 1
+          maxLength: 80
+        obs_scene:
+          type: string
+          minLength: 1
+          maxLength: 120
+        quality:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - source
+    StopStreamArgs:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 160
+        channel:
+          type: string
+          minLength: 2
+          maxLength: 64
+    SetTitleArgs:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 140
+        channel:
+          type: string
+          minLength: 2
+          maxLength: 64
+    SetGameArgs:
+      type: object
+      additionalProperties: false
+      properties:
+        game:
+          type: string
+          minLength: 1
+          maxLength: 120
+        game_id:
+          type: string
+          minLength: 1
+          maxLength: 80
+        channel:
+          type: string
+          minLength: 2
+          maxLength: 64
+      oneOf:
+        - required: ['game']
+        - required: ['game_id']
+    PostChatArgs:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+        channel:
+          type: string
+          minLength: 2
+          maxLength: 64
+        reply_parent_message_id:
+          type: string
+          minLength: 8
+          maxLength: 60
+    CreateClipArgs:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        channel:
+          type: string
+          minLength: 2
+          maxLength: 64
     ToolExecuteResponse:
       type: object
       properties:

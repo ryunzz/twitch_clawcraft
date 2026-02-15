@@ -18,6 +18,7 @@ Standalone Twitch tool service for OpenClaw bot runtimes.
 - Maintains job state (`queued`, `running`, `done`, `failed`).
 - Supports token auth and optional request signing.
 - Includes per-action rate limiting and request schema validation.
+- Adds real OBS websocket stream control for `start_stream` and `stop_stream`.
 
 ## Quick start
 
@@ -32,6 +33,10 @@ Set environment values before starting:
 cp .env.example .env
 ```
 
+Install OBS and enable websocket server access.
+- Default port is `4455` on OBS v5.
+- Set OBS scene and stream profile in OBS manually.
+
 ## Environment
 
 | Variable | Required | Purpose |
@@ -40,14 +45,25 @@ cp .env.example .env
 | `TOOL_SERVICE_TOKEN` | no | Bearer token for `/tools/execute` and job routes. |
 | `TOOL_SERVICE_SIGNATURE_SECRET` | no | If set, requires `x-tool-signature` HMAC for each execute request. |
 | `TOOL_ACTION_RATE_LIMIT_PER_MIN` | no | Requests per minute per action (default `60`). |
-| `TOOL_SERVICE_TIMEOUT_MS` | no | Stream action timeout before marking failed (default `20000`). |
-| `TOOL_JOB_TTL_MS` | no | Time jobs are retained (default `3600000`). |
-| `TOOL_OPERATION_STEP_MS` | no | Simulation step delay used by placeholder stream runtime (default `600`). |
-| `TWITCH_CLIENT_ID` | optional | Reserved for OBS/Twitch integration wiring. |
-| `TWITCH_OAUTH_TOKEN` | optional | Reserved for OBS/Twitch integration wiring. |
-| `TWITCH_CHANNEL` | optional | Reserved for OBS/Twitch integration wiring. |
-| `OBS_WS_URL` | optional | Reserved for OBS websocket integration. |
-| `OBS_WS_PASSWORD` | optional | Reserved for OBS websocket integration. |
+| `TOOL_SERVICE_TIMEOUT_MS` | no | Stream action timeout before marking failed (default `25000`). |
+| `OBS_STREAM_OPERATION_TIMEOUT_MS` | no | OBS state wait timeout for start/stop (default `20000`). |
+| `TOOL_JOB_TTL_MS` | no | Time jobs are retained (default `7200000`). |
+| `OBS_WS_URL` | no | OBS websocket URL (for example `ws://127.0.0.1:4455`). |
+| `OBS_WS_PASSWORD` | no | OBS websocket password. |
+| `OBS_CONNECT_TIMEOUT_MS` | no | OBS websocket connect timeout (default `12000`). |
+| `OBS_STREAM_POLL_MS` | no | Poll interval for stream state checks (default `700`). |
+| `OBS_OPERATION_RETRIES` | no | Retry count for OBS start/stop commands (default `2`). |
+| `OBS_STREAM_SCENE` | no | Optional default scene name before stream start. |
+| `TWITCH_CLIENT_ID` | optional | Twitch Helix API client id. |
+| `TWITCH_OAUTH_TOKEN` | optional | Twitch OAuth token for metadata/chat/clip calls. |
+| `TWITCH_BROADCASTER_ID` | optional | Preferred broadcaster numeric user id fallback. |
+| `TWITCH_BROADCASTER_LOGIN` | optional | Preferred broadcaster login fallback. |
+| `TWITCH_API_TIMEOUT_MS` | no | Twitch API timeout (default `10000`). |
+| `TWITCH_API_RETRIES` | no | Twitch API retry count (default `2`). |
+ 
+
+> Note: this service currently targets OBS websocket control for real streaming.
+> Twitch chat and clip behavior depends on the exact scopes for your token.
 
 ## API examples
 
@@ -87,6 +103,34 @@ Response:
   }
 }
 ```
+
+## How authentication is handled (important)
+
+- OpenClaw does **not** need Twitch username/password or OAuth session credentials.
+- Twitch session credentials live only in this service via `TWITCH_CLIENT_ID` and `TWITCH_OAUTH_TOKEN`.
+- Your OpenClaw bot only needs `TOOL_SERVICE_TOKEN` access to this service endpoint.
+- `start_stream`/`stop_stream` failures are surfaced through job status and do not crash the mission by default.
+
+## Quick validation steps
+
+1. Start OBS, enable its websocket, and verify a manual start/stop stream works in OBS.
+2. Start this service with valid env vars and a bearer token.
+3. Run:
+
+```bash
+curl -X POST http://localhost:3040/tools/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOOL_SERVICE_TOKEN>" \
+  -d '{
+    "request_id":"stream-test-1",
+    "agent_id":"bot-01",
+    "action":"twitch.start_stream",
+    "args":{"channel":"your_channel","title":"OpenClaw bot stream"}
+  }'
+```
+
+4. Poll `/tools/jobs/<job_id>` until status is `done`.
+5. Validate in Twitch that the stream appears live and metadata matches expected title/game.
 
 ### Set title
 
