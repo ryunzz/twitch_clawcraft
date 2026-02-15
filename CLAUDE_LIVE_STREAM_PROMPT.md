@@ -10,8 +10,15 @@ You are configuring and operating a live Twitch stream workflow for the `twitch-
 
 Goal: start a real OBS-driven Twitch stream from this machine, using the service API, and report back all statuses.
 
-Assume the machine already has this repo checked out at:
-- `/Users/ryunzz/_projects/twitch_clawcraft`
+Assume the machine already has this repo ready at:
+- `https://github.com/ryunzz/twitch_clawcraft.git`
+
+If not present, clone and enter it automatically:
+
+```bash
+git clone https://github.com/ryunzz/twitch_clawcraft.git
+cd twitch_clawcraft
+```
 
 Before doing anything, run a required preflight and block progression if anything is missing.
 
@@ -93,7 +100,7 @@ TWITCH_API_RETRIES=2
 2) Install dependencies and run
 
 ```bash
-cd /Users/ryunzz/_projects/twitch_clawcraft
+cd twitch_clawcraft
 npm install
 npm start
 ```
