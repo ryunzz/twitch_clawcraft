@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: twitch-clawcraft Tool API
+  version: 0.1.0
+servers:
+  - url: http://localhost:3040
+paths:
+  /tools/execute:
+    post:
+      summary: Execute a Twitch tool action for a bot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolExecuteRequest'
+      responses:
+        '200':
+          description: Synchronous action completed or accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolExecuteResponse'
+        '202':
+          description: Async action accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolExecuteResponse'
+        '400':
+          description: Invalid payload
+        '401':
+          description: Unauthorized
+        '429':
+          description: Action rate limit exceeded
+  /tools/jobs/{id}:
+    get:
+      summary: Retrieve async job status
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema:
+            type: string
+          description: Job id
+      responses:
+        '200':
+          description: Job state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolJobResponse'
+        '404':
+          description: Job not found
+components:
+  schemas:
+    ToolExecuteRequest:
+      type: object
+      required:
+        - agent_id
+        - action
+        - args
+      properties:
+        request_id:
+          type: string
+        agent_id:
+          type: string
+        action:
+          type: string
+          enum:
+            - twitch.start_stream
+            - twitch.stop_stream
+            - twitch.set_title
+            - twitch.set_game
+            - twitch.post_chat_message
+            - twitch.create_clip
+        args:
+          type: object
+          additionalProperties: false
+        mission_id:
+          type: string
+        correlation_id:
+          type: string
+    ToolExecuteResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        action:
+          type: string
+        result:
+          type: object
+          additionalProperties: true
+    ToolJobResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        job:
+          $ref: '#/components/schemas/ToolJob'
+    ToolJob:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - done
+            - failed
+        progress:
+          type: object
+          properties:
+            percent:
+              type: number
+            message:
+              type: string
+            updatedAt:
+              type: string
+              format: date-time
+        request_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
