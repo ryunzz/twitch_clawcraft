@@ -9,6 +9,7 @@
     "dev": "node index.js"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "obs-websocket-js": "^5.0.4"
   }
 }
